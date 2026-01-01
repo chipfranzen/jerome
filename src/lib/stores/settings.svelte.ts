@@ -15,15 +15,6 @@ class SettingsStore {
 		this.persist();
 	}
 
-	get selectedLanguage(): string {
-		return this.settings.selectedLanguage;
-	}
-
-	set selectedLanguage(value: string) {
-		this.settings.selectedLanguage = value;
-		this.persist();
-	}
-
 	get fontSize(): number {
 		return this.settings.fontSize;
 	}

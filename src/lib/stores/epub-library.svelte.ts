@@ -10,29 +10,10 @@ import {
 import type { StoredEpub } from '$lib/types/epub';
 
 class EpubLibraryStore {
-	private library = $state<StoredEpub[]>([]);
-	private initialized = false;
+	private library = $state<StoredEpub[]>(loadAllEpubMetadata());
 
 	get epubs(): StoredEpub[] {
-		if (!this.initialized) {
-			this.loadLibrary();
-		}
 		return this.library;
-	}
-
-	/**
-	 * Load all epub metadata from localStorage.
-	 */
-	private loadLibrary(): void {
-		this.library = loadAllEpubMetadata();
-		this.initialized = true;
-	}
-
-	/**
-	 * Check if an epub with the given ID or filename already exists.
-	 */
-	private isDuplicate(id: string, fileName: string): boolean {
-		return this.library.some((epub) => epub.id === id || epub.file_name === fileName);
 	}
 
 	/**
@@ -57,6 +38,13 @@ class EpubLibraryStore {
 
 		// Update reactive state
 		this.library.push(epub);
+	}
+
+	/**
+	 * Check if an epub with the given ID or filename already exists.
+	 */
+	private isDuplicate(id: string, fileName: string): boolean {
+		return this.library.some((epub) => epub.id === id || epub.file_name === fileName);
 	}
 
 	/**
@@ -110,7 +98,7 @@ class EpubLibraryStore {
 	 * Get epubs sorted by last accessed (most recent first).
 	 */
 	get recentEpubs(): StoredEpub[] {
-		return [...this.library].sort((a, b) => {
+		return [...this.epubs].sort((a, b) => {
 			const aTime = a.last_accessed ?? a.uploaded_at;
 			const bTime = b.last_accessed ?? b.uploaded_at;
 			return bTime - aTime;
