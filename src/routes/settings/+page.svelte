@@ -1,5 +1,11 @@
 <script lang="ts">
 	import { settingsStore } from '$lib/stores/settings.svelte';
+	import Container from '$lib/components/ui/Container.svelte';
+	import Card from '$lib/components/ui/Card.svelte';
+	import Heading from '$lib/components/ui/Heading.svelte';
+	import Button from '$lib/components/ui/Button.svelte';
+	import Input from '$lib/components/ui/Input.svelte';
+	import Message from '$lib/components/ui/Message.svelte';
 
 	let apiKeyInput = $state(settingsStore.apiKey ?? '');
 	let apiKeyError = $state('');
@@ -9,7 +15,14 @@
 		try {
 			apiKeyError = '';
 			saveSuccess = false;
-			settingsStore.apiKey = apiKeyInput || undefined;
+
+			// Require a value when saving
+			if (!apiKeyInput || apiKeyInput.trim() === '') {
+				apiKeyError = 'Please enter an API key or use the Clear Key button';
+				return;
+			}
+
+			settingsStore.apiKey = apiKeyInput;
 			saveSuccess = true;
 			setTimeout(() => {
 				saveSuccess = false;
@@ -26,56 +39,42 @@
 	}
 </script>
 
-<div class="mx-auto max-w-2xl p-6">
-	<h1 class="mb-8 text-3xl font-bold text-text-primary">Settings</h1>
+<Container>
+	<Heading level={1}>Settings</Heading>
 
 	<!-- API Key Section -->
-	<section class="mb-8 rounded-lg bg-surface p-6 shadow-sm">
-		<h2 class="mb-4 text-xl font-semibold text-text-primary">OpenAI API Key</h2>
+	<Card>
+		<Heading level={2}>OpenAI API Key</Heading>
 		<p class="mb-4 text-sm text-text-secondary">
 			Your API key is stored locally in your browser and never sent to any server except OpenAI.
 		</p>
 
-		<div class="mb-4">
-			<label for="api-key" class="mb-2 block text-sm font-medium text-text-primary">
-				API Key
-			</label>
-			<input
-				id="api-key"
-				type="password"
-				bind:value={apiKeyInput}
-				placeholder="sk-..."
-				class="w-full rounded-md border border-text-tertiary bg-background px-4 py-2 text-text-primary focus:border-primary-500 focus:ring-1 focus:ring-primary-500 focus:outline-none"
-			/>
-			{#if apiKeyError}
-				<p class="mt-2 text-sm text-error">{apiKeyError}</p>
-			{/if}
-			{#if saveSuccess}
-				<p class="mt-2 text-sm text-success">API key saved successfully!</p>
-			{/if}
-		</div>
+		<Input
+			id="api-key"
+			type="password"
+			bind:value={apiKeyInput}
+			placeholder="sk-..."
+			label="API Key"
+		/>
+
+		{#if apiKeyError}
+			<Message type="error" message={apiKeyError} />
+		{/if}
+		{#if saveSuccess}
+			<Message type="success" message="API key saved successfully!" />
+		{/if}
 
 		<div class="flex gap-3">
-			<button
-				onclick={handleSaveApiKey}
-				class="rounded-md bg-primary-500 px-4 py-2 text-white hover:bg-primary-600 focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 focus:outline-none"
-			>
-				Save API Key
-			</button>
+			<Button onclick={handleSaveApiKey}>Save API Key</Button>
 			{#if settingsStore.hasApiKey}
-				<button
-					onclick={handleClearApiKey}
-					class="rounded-md border border-text-tertiary px-4 py-2 text-text-primary hover:bg-background focus:ring-2 focus:ring-text-tertiary focus:ring-offset-2 focus:outline-none"
-				>
-					Clear Key
-				</button>
+				<Button variant="secondary" onclick={handleClearApiKey}>Clear Key</Button>
 			{/if}
 		</div>
-	</section>
+	</Card>
 
 	<!-- Font Size Section -->
-	<section class="rounded-lg bg-surface p-6 shadow-sm">
-		<h2 class="mb-4 text-xl font-semibold text-text-primary">Reading Preferences</h2>
+	<Card>
+		<Heading level={2}>Reading Preferences</Heading>
 
 		<div>
 			<label for="font-size" class="mb-2 block text-sm font-medium text-text-primary">
@@ -103,10 +102,10 @@
 				The quick brown fox jumps over the lazy dog. This is a preview of your reading font size.
 			</p>
 		</div>
-	</section>
+	</Card>
 
 	<!-- Back Link -->
 	<div class="mt-8">
 		<a href="/" class="text-primary-600 hover:text-primary-700">← Back to Library</a>
 	</div>
-</div>
+</Container>
