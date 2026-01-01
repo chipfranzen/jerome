@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { resolve } from '$app/paths';
 	import { settingsStore } from '$lib/stores/settings.svelte';
 	import Container from '$lib/components/ui/Container.svelte';
 	import Card from '$lib/components/ui/Card.svelte';
@@ -106,6 +107,6 @@
 
 	<!-- Back Link -->
 	<div class="mt-8">
-		<a href="/" class="text-primary-600 hover:text-primary-700">← Back to Library</a>
+		<a href={resolve('/')} class="text-primary-600 hover:text-primary-700">← Back to Library</a>
 	</div>
 </Container>
