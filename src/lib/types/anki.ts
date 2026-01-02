@@ -11,7 +11,6 @@ export interface AnkiCard {
 }
 
 export interface SessionDeck {
-	id: string;
 	book_id: string;
 	book_title: string;
 	cards: AnkiCard[];
