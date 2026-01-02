@@ -1,5 +1,6 @@
 import { get, set, del, keys } from 'idb-keyval';
-import type { StoredEpub } from '$lib/types/epub';
+import type { ReadingSession, StoredEpub } from '$lib/types/epub';
+import type { SessionDeck } from '$lib/types/anki';
 
 // IndexedDB keys
 const EPUB_PREFIX = 'epub:';
@@ -7,6 +8,8 @@ const EPUB_PREFIX = 'epub:';
 // LocalStorage keys
 const SETTINGS_KEY = 'jerome:settings';
 const EPUB_METADATA_PREFIX = 'jerome:epub-metadata';
+const READING_SESSION_KEY = 'jerome:reading-session';
+const SESSION_DECK_PREFIX = 'jerome:session-deck:';
 
 // Types
 export interface AppSettings {
@@ -118,4 +121,58 @@ export function loadSettings(): AppSettings {
 	}
 	// Default fontsize.
 	return { fontSize: 1.125 };
+}
+//
+// ========================================
+// Reading Session Functions
+// ========================================
+
+/**
+ * Save the current reading session.
+ */
+export function saveReadingSession(session: ReadingSession): void {
+	localStorage.setItem(READING_SESSION_KEY, JSON.stringify(session));
+}
+
+/**
+ * Load the current reading session.
+ */
+export function loadReadingSession(): ReadingSession | null {
+	const stored = localStorage.getItem(READING_SESSION_KEY);
+	if (stored) {
+		return JSON.parse(stored);
+	}
+	return null;
+}
+
+/**
+ * Clear the current reading session.
+ */
+export function clearReadingSession(): void {
+	localStorage.removeItem(READING_SESSION_KEY);
+}
+
+/**
+ * Save a session deck.
+ */
+export function saveSessionDeck(deck: SessionDeck): void {
+	localStorage.setItem(`${SESSION_DECK_PREFIX}${deck.book_id}`, JSON.stringify(deck));
+}
+
+/**
+ * Load a session deck by book ID.
+ */
+export function loadSessionDeck(bookId: string): SessionDeck | null {
+	const stored = localStorage.getItem(`${SESSION_DECK_PREFIX}${bookId}`);
+	if (stored) {
+		return JSON.parse(stored);
+	}
+	return null;
+}
+
+/**
+ * Delete a session deck by book ID.
+ */
+export function deleteSessionDeck(bookId: string): void {
+	localStorage.removeItem(`${SESSION_DECK_PREFIX}${bookId}`);
 }
