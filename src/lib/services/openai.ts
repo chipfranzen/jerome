@@ -16,9 +16,12 @@ export async function lookupWord(
 		throw new Error(`Unsupported language: ${language}`);
 	}
 
+	// Insert a marker at the click position to make it obvious to the LLM
+	const markedContext = context.slice(0, clickIndex) + '<<<CLICK>>>' + context.slice(clickIndex);
+
 	const client = new OpenAI({
 		apiKey,
-		dangerouslyAllowBrowser: true // We are client-side only
+		dangerouslyAllowBrowser: true
 	});
 
 	try {
@@ -31,7 +34,7 @@ export async function lookupWord(
 				},
 				{
 					role: 'user',
-					content: `Context: "${context}"\nClick index: ${clickIndex}`
+					content: `Context with click marker: "${markedContext}"\n\nThe <<<CLICK>>> marker shows exactly where the user clicked. Find the word that contains or is adjacent to this marker.`
 				}
 			],
 			response_format: { type: 'json_object' },
