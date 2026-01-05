@@ -6,14 +6,12 @@ export interface LanguageConfig {
 }
 
 export interface LLMResponse {
-	selected_text: string;
+	error?: string;
 	full_word: string;
 	word_class: string;
 	definition: string;
+	sentence: string;
 	sentence_translation: string;
 	example_sentence: string;
-	word_boundaries?: {
-		start: number;
-		end: number;
-	};
+	example_translation: string;
 }
