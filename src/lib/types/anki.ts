@@ -5,6 +5,7 @@ export interface AnkiCard {
 	sentence: string;
 	sentence_translation: string;
 	example_sentence: string;
+	example_translation: string;
 	word_class: string;
 	created_at: number;
 	source_text?: string;

@@ -36,6 +36,7 @@
 			sentence: definition.sentence,
 			sentence_translation: definition.sentence_translation,
 			example_sentence: definition.example_sentence,
+			example_translation: definition.example_translation,
 			word_class: definition.word_class,
 			created_at: Date.now()
 		};

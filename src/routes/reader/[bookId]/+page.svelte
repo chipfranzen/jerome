@@ -2,6 +2,7 @@
 	import { onMount, onDestroy } from 'svelte';
 	import { page } from '$app/stores';
 	import { resolve } from '$app/paths';
+	import { exportDeckToCSV, downloadCSV, generateExportFilename } from '$lib/services/anki-export';
 	import ePub, { type Book, type Rendition, type Contents } from 'epubjs';
 	import { epubLibrary } from '$lib/stores/epub-library.svelte';
 	import { sessionStore } from '$lib/stores/session.svelte';
@@ -141,6 +142,16 @@
 		isPanelOpen = !isPanelOpen;
 	}
 
+	function handleExportDeck() {
+		if (!sessionStore.deck || sessionStore.deck.cards.length === 0) {
+			return;
+		}
+
+		const csv = exportDeckToCSV(sessionStore.deck, sessionStore.session?.language || 'vietnamese');
+		const filename = generateExportFilename(sessionStore.deck.book_title);
+		downloadCSV(csv, filename);
+	}
+
 	onMount(async () => {
 		try {
 			const metadata = epubLibrary.getMetadata(bookId);
@@ -248,7 +259,7 @@
 				</h1>
 			{/if}
 
-			<div class="flex items-center gap-2">
+			<div class="flex items-center gap-3">
 				{#if currentLocation}
 					<span class="text-sm text-text-secondary">{currentLocation}</span>
 				{/if}
@@ -256,6 +267,9 @@
 					<span class="rounded-full bg-primary-100 px-3 py-1 text-sm font-medium text-primary-700">
 						{sessionStore.deck.cards.length} cards
 					</span>
+					{#if sessionStore.deck.cards.length > 0}
+						<Button variant="secondary" onclick={handleExportDeck}>Export</Button>
+					{/if}
 				{/if}
 			</div>
 		</div>
