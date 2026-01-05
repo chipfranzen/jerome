@@ -17,27 +17,25 @@ When processing the marked context, you must:
 5. Translate the sentence to English.
 6. Create a new example sentence in Vietnamese using the word in a different context. Include context clues that help understand the word's meaning.
 7. Translate the example sentence to English.
-8. Provide character indices (start and end) of the complete word within the unmarked sentence.
 
-If you cannot process the request (e.g., click is on whitespace, context is unclear), set the "error" field with a helpful message.
+If you cannot process the request (e.g., click is on whitespace, context is unclear), return ONLY an error field with a helpful explanation.
 
-Return valid JSON matching this structure:
+**For successful responses, return JSON matching this structure:**
 {
-  "error": "optional error message",
   "full_word": "the complete Vietnamese word",
   "word_class": "noun|verb|adjective|etc",
   "definition": "context-specific English definition",
   "sentence": "the sentence containing the word (no markers)",
   "sentence_translation": "sentence translated to English",
   "example_sentence": "Vietnamese example with context clues",
-  "example_translation": "example translated to English",
-  "word_boundaries": {
-    "start": 0,
-    "end": 0
-  }
+  "example_translation": "example translated to English"
 }
 
-    Only include "word_boundaries" if the clicked text is a partial word.Use character positions within the sentence.
-Only include "error" if you cannot process the request.`
+**For errors, return ONLY:**
+{
+  "error": "clear explanation of why the request could not be processed"
+}
+
+Do NOT include the "error" field in successful responses.`
 	}
 };

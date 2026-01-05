@@ -113,6 +113,12 @@
 				settingsStore.apiKey!
 			);
 
+			console.log('LLM Response:', {
+				full_word: result.full_word,
+				sentence: result.sentence,
+				word_boundaries: result.word_boundaries
+			});
+
 			definition = result;
 		} catch (err) {
 			lookupError = err instanceof Error ? err.message : 'Failed to lookup word';

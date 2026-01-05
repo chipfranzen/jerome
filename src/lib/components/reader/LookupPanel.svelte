@@ -19,7 +19,6 @@
 	let showExampleTranslation = $state(false);
 	let cardAdded = $state(false);
 
-	// Reset states when definition changes
 	$effect(() => {
 		if (definition) {
 			showExampleTranslation = false;
@@ -43,6 +42,35 @@
 
 		onAddCard(card);
 		cardAdded = true;
+	}
+
+	function splitSentenceAroundWord(
+		sentence: string,
+		word: string
+	): {
+		before: string;
+		word: string;
+		after: string;
+	} | null {
+		// Escape special regex characters
+		const escapedWord = word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+		// Find word with word boundaries
+		const regex = new RegExp(`(^|[\\s,.:;!?])(${escapedWord})($|[\\s,.:;!?])`, 'i');
+		const match = sentence.match(regex);
+
+		if (!match) {
+			return null;
+		}
+
+		const index = match.index! + match[1].length;
+		const wordLength = match[2].length;
+
+		return {
+			before: sentence.substring(0, index),
+			word: sentence.substring(index, index + wordLength),
+			after: sentence.substring(index + wordLength)
+		};
 	}
 </script>
 
@@ -77,7 +105,6 @@
 		<!-- Scrollable Content -->
 		<div class="flex-1 overflow-y-auto p-4">
 			{#if isLoading}
-				<!-- Loading State -->
 				<div class="flex items-center justify-center py-12">
 					<div class="text-center">
 						<div class="mb-2 text-4xl">⏳</div>
@@ -85,44 +112,37 @@
 					</div>
 				</div>
 			{:else if error}
-				<!-- Error State -->
 				<div class="rounded-lg border border-error bg-red-50 p-4">
 					<p class="mb-3 font-semibold text-error">Error</p>
 					<p class="mb-4 text-sm text-text-primary">{error}</p>
 					<Button variant="primary" onclick={onRetry}>Try Again</Button>
 				</div>
 			{:else if definition}
-				<!-- Definition -->
-				<div>
-					<SectionHeading>Definition</SectionHeading>
-					<p class="text-text-primary">{definition.definition}</p>
-				</div>
-
-				<!-- In Context -->
-				<div>
-					<SectionHeading>In Context</SectionHeading>
-					<p class="mb-1 text-text-primary italic">
-						"{#if definition.word_boundaries}
-							{definition.sentence.slice(0, definition.word_boundaries.start)}<strong
-								>{definition.sentence.slice(
-									definition.word_boundaries.start,
-									definition.word_boundaries.end
-								)}</strong
-							>{definition.sentence.slice(definition.word_boundaries.end)}
-						{:else}
-							{definition.sentence}
-						{/if}"
-					</p>
-					<p class="text-sm text-text-secondary">→ {definition.sentence_translation}</p>
-				</div>
-
-				<!-- Example -->
-				<div>
-					<SectionHeading>Example</SectionHeading>
-					<p class="mb-2 text-text-primary italic">
-						{definition.example_sentence}
-					</p>
+				<div class="space-y-6">
+					<!-- Definition -->
 					<div>
+						<SectionHeading>Definition</SectionHeading>
+						<p class="text-text-primary">{definition.definition}</p>
+					</div>
+
+					<!-- In Context -->
+					<div>
+						<SectionHeading>In Context</SectionHeading>
+						{#if splitSentenceAroundWord(definition.sentence, definition.full_word)}
+							{@const parts = splitSentenceAroundWord(definition.sentence, definition.full_word)}
+							<p class="mb-1 text-text-primary italic">
+								"{parts.before}<strong>{parts.word}</strong>{parts.after}"
+							</p>
+						{:else}
+							<p class="mb-1 text-text-primary italic">"{definition.sentence}"</p>
+						{/if}
+						<p class="text-sm text-text-secondary">→ {definition.sentence_translation}</p>
+					</div>
+
+					<!-- Example -->
+					<div>
+						<SectionHeading>Example</SectionHeading>
+						<p class="mb-2 text-text-primary italic">{definition.example_sentence}</p>
 						<button
 							onclick={() => (showExampleTranslation = !showExampleTranslation)}
 							class="text-sm text-primary-600 hover:text-primary-700"
@@ -130,14 +150,11 @@
 							{showExampleTranslation ? 'Hide' : 'Show'} Translation ▼
 						</button>
 						{#if showExampleTranslation}
-							<p class="mt-2 text-sm text-text-secondary">
-								→ {definition.example_translation}
-							</p>
+							<p class="mt-2 text-sm text-text-secondary">→ {definition.example_translation}</p>
 						{/if}
 					</div>
 				</div>
 			{:else}
-				<!-- Empty State -->
 				<div class="flex items-center justify-center py-12">
 					<div class="text-center">
 						<div class="mb-2 text-4xl">📖</div>
@@ -148,10 +165,9 @@
 		</div>
 	</aside>
 {:else}
-	<!-- Collapsed state - show toggle button -->
 	<button
 		onclick={onToggle}
-		class="fixed top-1/2 right-0 z-10 -translate-y-1/2 rounded-l-lg bg-surface px-2 py-4 shadow-lg hover:bg-background"
+		class="fixed top-1/2 right-0 z-10 -translate-y-1/2 rounded-l-lg bg-surface px-3 py-6 shadow-lg hover:bg-background focus:ring-2 focus:ring-primary-500 focus:outline-none"
 		aria-label="Open lookup panel"
 	>
 		◀

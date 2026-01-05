@@ -6,16 +6,12 @@ export interface LanguageConfig {
 }
 
 export interface LLMResponse {
-	error?: string; // LLM populates if it cannot process the request
+	error?: string;
 	full_word: string;
 	word_class: string;
 	definition: string;
-	sentence: string; // The identified sentence containing the word
+	sentence: string;
 	sentence_translation: string;
 	example_sentence: string;
 	example_translation: string;
-	word_boundaries?: {
-		start: number; // Character position in sentence
-		end: number;
-	};
 }
