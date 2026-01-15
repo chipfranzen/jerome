@@ -7,6 +7,7 @@
 	import { sessionStore } from '$lib/stores/session.svelte';
 	import { settingsStore } from '$lib/stores/settings.svelte';
 	import { lookupWord, extractContext } from '$lib/services/openai';
+	import { exportDeckToCSV, downloadCSV, generateExportFilename } from '$lib/services/anki-export';
 	import type { LLMResponse } from '$lib/types/language';
 	import type { AnkiCard } from '$lib/types/anki';
 	import { DEFAULT_READING_FONT, getGoogleFontsUrl, getReadingFontFamily } from '$lib/config/fonts';
@@ -43,7 +44,6 @@
 	}
 
 	async function handleTextClick(event: MouseEvent, contents: Contents) {
-		// Don't process if no API key
 		if (!settingsStore.hasApiKey) {
 			lookupError = 'Please set your OpenAI API key in settings to use word lookup.';
 			definition = null;
@@ -56,7 +56,6 @@
 		const range = selection.getRangeAt(0);
 		const clickedNode = range.startContainer;
 
-		// Find the closest block-level container (p, div, etc.)
 		let container =
 			clickedNode.nodeType === Node.TEXT_NODE
 				? clickedNode.parentElement
@@ -68,33 +67,17 @@
 
 		if (!container) return;
 
-		// Get all text content from the container
 		const fullText = container.textContent || '';
 		if (!fullText.trim()) return;
 
-		// Calculate the absolute offset by creating a range from container start to click
 		const containerRange = contents.document.createRange();
 		containerRange.selectNodeContents(container);
 		containerRange.setEnd(clickedNode, range.startOffset);
 
 		const absoluteOffset = containerRange.toString().length;
-
-		// Extract context window
 		const { context, relativeIndex } = extractContext(fullText, absoluteOffset);
 
-		// Debug logging
-		console.log('Click details:', {
-			clickedText: fullText.substring(Math.max(0, absoluteOffset - 10), absoluteOffset + 10),
-			absoluteOffset,
-			relativeIndex,
-			context,
-			fullText: fullText.substring(0, 100) + '...'
-		});
-
-		// Store for retry
 		lastClickData = { context, clickIndex: relativeIndex };
-
-		// Perform lookup
 		await performLookup(context, relativeIndex);
 	}
 
@@ -113,12 +96,6 @@
 				settingsStore.apiKey!
 			);
 
-			console.log('LLM Response:', {
-				full_word: result.full_word,
-				sentence: result.sentence,
-				word_boundaries: result.word_boundaries
-			});
-
 			definition = result;
 		} catch (err) {
 			lookupError = err instanceof Error ? err.message : 'Failed to lookup word';
@@ -135,6 +112,20 @@
 
 	function handleAddCard(card: AnkiCard) {
 		sessionStore.addCard(card);
+	}
+
+	function handleDeleteCard(cardId: string) {
+		sessionStore.removeCard(cardId);
+	}
+
+	function handleExportDeck() {
+		if (!sessionStore.deck || sessionStore.deck.cards.length === 0) {
+			return;
+		}
+
+		const csv = exportDeckToCSV(sessionStore.deck, sessionStore.session?.language || 'vietnamese');
+		const filename = generateExportFilename(sessionStore.deck.book_title);
+		downloadCSV(csv, filename);
 	}
 
 	function togglePanel() {
@@ -169,7 +160,6 @@
 				spread: 'none'
 			});
 
-			// Register fonts
 			rendition.hooks.content.register(function (contents) {
 				const head = contents.document.head;
 				const link = contents.document.createElement('link');
@@ -177,7 +167,6 @@
 				link.href = getGoogleFontsUrl(DEFAULT_READING_FONT);
 				head.appendChild(link);
 
-				// Add click handler to the iframe content
 				contents.document.addEventListener('click', (e) => {
 					handleTextClick(e as MouseEvent, contents);
 				});
@@ -228,6 +217,10 @@
 	function handleNextPage() {
 		rendition?.next();
 	}
+
+	function handleClearDeck() {
+		sessionStore.clearDeck();
+	}
 </script>
 
 <div class="flex h-screen flex-col">
@@ -248,14 +241,9 @@
 				</h1>
 			{/if}
 
-			<div class="flex items-center gap-2">
+			<div class="flex items-center gap-3">
 				{#if currentLocation}
 					<span class="text-sm text-text-secondary">{currentLocation}</span>
-				{/if}
-				{#if sessionStore.deck}
-					<span class="rounded-full bg-primary-100 px-3 py-1 text-sm font-medium text-primary-700">
-						{sessionStore.deck.cards.length} cards
-					</span>
 				{/if}
 			</div>
 		</div>
@@ -263,7 +251,7 @@
 
 	<!-- Reader Area with Side Panel -->
 	<main class="relative flex flex-1 overflow-hidden bg-background">
-		<!-- Epub Viewer (takes remaining space) -->
+		<!-- Epub Viewer -->
 		<div class="relative flex-1 overflow-hidden">
 			<div bind:this={viewerContainer} class="absolute inset-0 pb-24"></div>
 
@@ -308,8 +296,12 @@
 			isLoading={isLookingUp}
 			{definition}
 			error={lookupError}
+			deck={sessionStore.deck}
 			onRetry={handleRetry}
 			onAddCard={handleAddCard}
+			onDeleteCard={handleDeleteCard}
+			onClearDeck={handleClearDeck}
+			onExport={handleExportDeck}
 			onToggle={togglePanel}
 		/>
 	</main>

@@ -1,20 +1,37 @@
 <script lang="ts">
 	import type { LLMResponse } from '$lib/types/language';
-	import type { AnkiCard } from '$lib/types/anki';
+	import type { AnkiCard, SessionDeck } from '$lib/types/anki';
 	import Button from '$lib/components/ui/Button.svelte';
 	import SectionHeading from '$lib/components/ui/SectionHeading.svelte';
+	import DeckManagement from './DeckManagement.svelte';
 
 	interface Props {
 		isOpen: boolean;
 		isLoading: boolean;
 		definition: LLMResponse | null;
 		error: string | null;
+		deck: SessionDeck | null;
 		onRetry: () => void;
 		onAddCard: (card: AnkiCard) => void;
+		onDeleteCard: (cardId: string) => void;
+		onClearDeck: () => void;
+		onExport: () => void;
 		onToggle: () => void;
 	}
 
-	let { isOpen, isLoading, definition, error, onRetry, onAddCard, onToggle }: Props = $props();
+	let {
+		isOpen,
+		isLoading,
+		definition,
+		error,
+		deck,
+		onRetry,
+		onAddCard,
+		onDeleteCard,
+		onClearDeck,
+		onExport,
+		onToggle
+	}: Props = $props();
 
 	let showExampleTranslation = $state(false);
 	let cardAdded = $state(false);
@@ -36,6 +53,7 @@
 			sentence: definition.sentence,
 			sentence_translation: definition.sentence_translation,
 			example_sentence: definition.example_sentence,
+			example_translation: definition.example_translation,
 			word_class: definition.word_class,
 			created_at: Date.now()
 		};
@@ -52,10 +70,7 @@
 		word: string;
 		after: string;
 	} | null {
-		// Escape special regex characters
 		const escapedWord = word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-
-		// Find word with word boundaries
 		const regex = new RegExp(`(^|[\\s,.:;!?])(${escapedWord})($|[\\s,.:;!?])`, 'i');
 		const match = sentence.match(regex);
 
@@ -76,92 +91,102 @@
 
 {#if isOpen}
 	<aside class="flex h-full w-96 flex-col border-l border-text-tertiary bg-surface shadow-lg">
-		<!-- Fixed Header -->
-		<div class="flex items-center justify-between border-b border-text-tertiary p-4">
-			{#if definition}
-				<div class="flex-1">
-					<h2 class="text-2xl font-semibold text-text-primary">{definition.full_word}</h2>
-					<p class="text-sm text-text-secondary">{definition.word_class}</p>
-				</div>
-				<Button
-					variant={cardAdded ? 'secondary' : 'primary'}
-					onclick={handleAddCard}
-					disabled={cardAdded}
+		<!-- Lookup Section (60%) -->
+		<div class="flex h-[60%] flex-col">
+			<!-- Fixed Header -->
+			<div class="flex items-center justify-between border-b border-text-tertiary p-4">
+				{#if definition}
+					<div class="flex-1">
+						<h2 class="text-2xl font-semibold text-text-primary">{definition.full_word}</h2>
+						<p class="text-sm text-text-secondary">{definition.word_class}</p>
+					</div>
+					<Button
+						variant={cardAdded ? 'secondary' : 'primary'}
+						onclick={handleAddCard}
+						disabled={cardAdded}
+					>
+						{cardAdded ? 'Added ✓' : 'Add to Deck'}
+					</Button>
+				{:else}
+					<h2 class="text-lg font-semibold text-text-primary">Word Lookup</h2>
+				{/if}
+				<button
+					onclick={onToggle}
+					class="ml-2 text-text-secondary hover:text-text-primary"
+					aria-label="Close panel"
 				>
-					{cardAdded ? 'Added ✓' : 'Add to Deck'}
-				</Button>
-			{:else}
-				<h2 class="text-lg font-semibold text-text-primary">Word Lookup</h2>
-			{/if}
-			<button
-				onclick={onToggle}
-				class="ml-2 text-text-secondary hover:text-text-primary"
-				aria-label="Close panel"
-			>
-				✕
-			</button>
+					✕
+				</button>
+			</div>
+
+			<!-- Scrollable Content -->
+			<div class="flex-1 overflow-y-auto p-4">
+				{#if isLoading}
+					<div class="flex items-center justify-center py-12">
+						<div class="text-center">
+							<div class="mb-2 text-4xl">⏳</div>
+							<p class="text-text-secondary">Looking up word...</p>
+						</div>
+					</div>
+				{:else if error}
+					<div class="rounded-lg border border-error bg-red-50 p-4">
+						<p class="mb-3 font-semibold text-error">Error</p>
+						<p class="mb-4 text-sm text-text-primary">{error}</p>
+						<Button variant="primary" onclick={onRetry}>Try Again</Button>
+					</div>
+				{:else if definition}
+					<div class="space-y-6">
+						<!-- Definition -->
+						<div>
+							<SectionHeading>Definition</SectionHeading>
+							<p class="text-text-primary">{definition.definition}</p>
+						</div>
+
+						<!-- In Context -->
+						<div>
+							<SectionHeading>In Context</SectionHeading>
+							{#if splitSentenceAroundWord(definition.sentence, definition.full_word)}
+								{@const parts = splitSentenceAroundWord(definition.sentence, definition.full_word)}
+								<p class="mb-1 text-text-primary italic">
+									"{parts.before}<strong>{parts.word}</strong>{parts.after}"
+								</p>
+							{:else}
+								<p class="mb-1 text-text-primary italic">"{definition.sentence}"</p>
+							{/if}
+							<p class="text-sm text-text-secondary">→ {definition.sentence_translation}</p>
+						</div>
+
+						<!-- Example -->
+						<div>
+							<SectionHeading>Example</SectionHeading>
+							<p class="mb-2 text-text-primary italic">{definition.example_sentence}</p>
+							<button
+								onclick={() => (showExampleTranslation = !showExampleTranslation)}
+								class="text-sm text-primary-600 hover:text-primary-700"
+							>
+								{showExampleTranslation ? 'Hide' : 'Show'} Translation ▼
+							</button>
+							{#if showExampleTranslation}
+								<p class="mt-2 text-sm text-text-secondary">
+									→ {definition.example_translation}
+								</p>
+							{/if}
+						</div>
+					</div>
+				{:else}
+					<div class="flex items-center justify-center py-12">
+						<div class="text-center">
+							<div class="mb-2 text-4xl">📖</div>
+							<p class="text-text-secondary">Click a word to see its definition</p>
+						</div>
+					</div>
+				{/if}
+			</div>
 		</div>
 
-		<!-- Scrollable Content -->
-		<div class="flex-1 overflow-y-auto p-4">
-			{#if isLoading}
-				<div class="flex items-center justify-center py-12">
-					<div class="text-center">
-						<div class="mb-2 text-4xl">⏳</div>
-						<p class="text-text-secondary">Looking up word...</p>
-					</div>
-				</div>
-			{:else if error}
-				<div class="rounded-lg border border-error bg-red-50 p-4">
-					<p class="mb-3 font-semibold text-error">Error</p>
-					<p class="mb-4 text-sm text-text-primary">{error}</p>
-					<Button variant="primary" onclick={onRetry}>Try Again</Button>
-				</div>
-			{:else if definition}
-				<div class="space-y-6">
-					<!-- Definition -->
-					<div>
-						<SectionHeading>Definition</SectionHeading>
-						<p class="text-text-primary">{definition.definition}</p>
-					</div>
-
-					<!-- In Context -->
-					<div>
-						<SectionHeading>In Context</SectionHeading>
-						{#if splitSentenceAroundWord(definition.sentence, definition.full_word)}
-							{@const parts = splitSentenceAroundWord(definition.sentence, definition.full_word)}
-							<p class="mb-1 text-text-primary italic">
-								"{parts.before}<strong>{parts.word}</strong>{parts.after}"
-							</p>
-						{:else}
-							<p class="mb-1 text-text-primary italic">"{definition.sentence}"</p>
-						{/if}
-						<p class="text-sm text-text-secondary">→ {definition.sentence_translation}</p>
-					</div>
-
-					<!-- Example -->
-					<div>
-						<SectionHeading>Example</SectionHeading>
-						<p class="mb-2 text-text-primary italic">{definition.example_sentence}</p>
-						<button
-							onclick={() => (showExampleTranslation = !showExampleTranslation)}
-							class="text-sm text-primary-600 hover:text-primary-700"
-						>
-							{showExampleTranslation ? 'Hide' : 'Show'} Translation ▼
-						</button>
-						{#if showExampleTranslation}
-							<p class="mt-2 text-sm text-text-secondary">→ {definition.example_translation}</p>
-						{/if}
-					</div>
-				</div>
-			{:else}
-				<div class="flex items-center justify-center py-12">
-					<div class="text-center">
-						<div class="mb-2 text-4xl">📖</div>
-						<p class="text-text-secondary">Click a word to see its definition</p>
-					</div>
-				</div>
-			{/if}
+		<!-- Deck Management Section (40%) -->
+		<div class="h-[40%]">
+			<DeckManagement {deck} {onExport} {onDeleteCard} {onClearDeck} />
 		</div>
 	</aside>
 {:else}
